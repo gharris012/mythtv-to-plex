@@ -96,14 +96,14 @@ else
     encoder_opts="--encoder x264 --encoder-preset=medium"
 fi
 encoder_opts="$encoder_opts --encoder-profile=high --encoder-level=4.0 --vfr"
-filter_opts="--crop 0:0:0:0 --strict-anamorphic --decomb"
+filter_opts="--crop 0:0:0:0 --strict-anamorphic"
 handbrake_options="$encoder_opts $filter_opts --optimize --subtitle scan,1 --subtitle-burned=1"
 
-#interlaced="$(mediainfo --Inform='Video;%ScanType%' "$input")"
-#
-#if [ "$interlaced" == "Interlaced" ]; then
-#    handbrake_options="$handbrake_options --deinterlace"
-#fi
+interlaced="$(mediainfo --Inform='Video;%ScanType%' "$input")"
+
+if [ "$interlaced" == "Interlaced" ]; then
+    handbrake_options="$handbrake_options --deinterlace=bob"
+fi
 
 width="$(mediainfo --Inform='Video;%Width%' "$input")"
 height="$(mediainfo --Inform='Video;%Height%' "$input")"
@@ -194,7 +194,8 @@ fi
 #    fi
 #fi
 
-output="$(basename "$input")"
+#output="$(basename "$input")"
+output="$input"
 outputbase="${output%\.[^.]*}"
 
 if [ -n "$output_ext" ]; then
@@ -221,9 +222,10 @@ fi
 echo "Encoding: $input to $output" >&2
 echo "$handbrake_options" >&2
 
+
+
 time "$nicecmd" $ionicecmd "$handbrake" \
     $handbrake_options \
     --input "$input" \
     --output "$output" \
     2>&1 | tee -a "${output}.log"
-
