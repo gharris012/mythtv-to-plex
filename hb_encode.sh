@@ -141,23 +141,6 @@ fi
 
 handbrake_options="$handbrake_options --vb $bitrate"
 
-#frame_rate="$(mediainfo --Inform='Video;%FrameRate_Original%' "$input")"
-#
-#if [ ! "$frame_rate" ]; then
-#    frame_rate="$(mediainfo --Inform='Video;%FrameRate%' "$input")"
-#fi
-#
-#frame_rate_file="$(basename "$input")"
-#frame_rate_file="$frame_rates_location/${frame_rate_file%\.[^.]*}.txt"
-#
-#if [ -f "$frame_rate_file" ]; then
-#    handbrake_options="$handbrake_options --rate $(cat "$frame_rate_file")"
-#elif [ "$frame_rate" == '29.970' ]; then
-#    handbrake_options="$handbrake_options --rate 23.976"
-#else
-#    handbrake_options="$handbrake_options --rate 30 --pfr"
-#fi
-
 channels="$(mediainfo --Inform='Audio;%Channels%' "$input" | sed 's/[^0-9].*$//')"
 
 if (($channels > 2)); then
@@ -166,35 +149,6 @@ elif [ "$(mediainfo --Inform='General;%Audio_Format_List%' "$input" | sed 's| /.
     handbrake_options="$handbrake_options --aencoder copy:aac"
 fi
 
-#if [ "$frame_rate" == '29.970' ]; then
-#    handbrake_options="$handbrake_options --detelecine"
-#fi
-
-#srt_file="$(basename "$input")"
-#srt_file="$subtitles_location/${srt_file%\.[^.]*}.srt"
-#
-#if [ -f "$srt_file" ]; then
-#    subtitle_format="$(mediainfo --Inform='Text;%Format%' "$input" | sed q)"
-#
-#    if [ "$subtitle_format" == 'VobSub' ] || [ "$subtitle_format" == 'PGS' ]; then
-#        handbrake_options="$handbrake_options --subtitle 1 --subtitle-burned"
-#    else
-#        tmp=""
-#
-#        trap '[ "$tmp" ] && rm -rf "$tmp"' 0
-#        trap '[ "$tmp" ] && rm -rf "$tmp"; exit 1' SIGHUP SIGINT SIGQUIT SIGTERM
-#
-#        tmp="/tmp/${program}.$$"
-#        mkdir -m 700 "$tmp" || exit 1
-#
-#        temporary_srt_file="$tmp/subtitle.srt"
-#        cp "$srt_file" "$temporary_srt_file" || exit 1
-#
-#        handbrake_options="$handbrake_options --srt-file $(escape_string "$temporary_srt_file") --srt-codeset UTF-8 --srt-lang eng --srt-default 1"
-#    fi
-#fi
-
-#output="$(basename "$input")"
 output="$input"
 outputbase="${output%\.[^.]*}"
 
@@ -221,8 +175,6 @@ fi
 
 echo "Encoding: $input to $output" >&2
 echo "$handbrake_options" >&2
-
-
 
 time "$nicecmd" $ionicecmd "$handbrake" \
     $handbrake_options \
