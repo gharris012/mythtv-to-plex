@@ -1,0 +1,13 @@
+# find videos that do not follow plex naming convention
+#  create a script to rename the files
+#  file renaming must be done manually
+#  note that this ended up being faster than trying to create a real tvdb lookup script
+find ./ \( \( -name "*.mpg" -o -name "*.ts" \) -a \! -name "* s??e?? *" \) -printf "mv \"%P\" \"%P\"\n" > tvname.sh
+
+# find videos that have not yet been converted to mp4
+find ./ \( -name "*.ts" -o -name "*.mpg" \) -exec bash -c 'mp4="${1%.*}.mp4"; [ ! -f "$mp4" ]' _ {} \; -print
+
+find ./ \( -name "*.ts" -o -name "*.mpg" \) -exec bash -c 'mp4="${1%.*}.mp4"; [ ! -f "$mp4" ]' _ {} \; -ok hb_encode.sh {} \; -quit
+
+# and encode them
+find ./ \( -name "*.ts" -o -name "*.mpg" \) -exec bash -c 'mp4="${1%.*}.mp4"; [ ! -f "$mp4" ]' _ {} \; -exec hb_encode.sh {} \;
