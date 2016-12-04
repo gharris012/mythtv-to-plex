@@ -11,3 +11,14 @@ find ./ \( -name "*.ts" -o -name "*.mpg" \) -exec bash -c 'mp4="${1%.*}.mp4"; [ 
 
 # and encode them
 find ./ \( -name "*.ts" -o -name "*.mpg" \) -exec bash -c 'mp4="${1%.*}.mp4"; [ ! -f "$mp4" ]' _ {} \; -exec hb_encode.sh {} \;
+
+
+## reset permissions
+sudo chmod 0600 -R *
+sudo chown plex.adm -R *
+sudo chmod u+X,o+rX,g+rwX -R *
+sudo find -type d -exec chmod g+s {} \;
+
+# ssh into openssh on windows, get bash prompt
+set HOME=%USERPROFILE%
+bash --login
