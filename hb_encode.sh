@@ -100,7 +100,9 @@ interlaced="$(mediainfo --Inform='Video;%ScanType%' "$input")"
 # try to determine them using resolution (there is no 1080p broadcast)
 if [[ "$interlaced" == "Interlaced" || ( "$height" == "1080" && "$frame_rate" == "29.970" ) ]]; then
     # double framerate for bob
-    frame_rate=$(echo "scale=3;$frame_rate*2"|bc)
+    # bc is not returning anything in windows.. seems to be a bug, using awk
+    #frame_rate=$(echo "scale=3;$frame_rate*2"|bc)
+    frame_rate=$(awk -vinput="$frame_rate" 'BEGIN{printf "%.3f", input*2}')
     if [[ "$interlaced" == "Interlaced" ]]; then
         handbrake_options="$handbrake_options --deinterlace=bob"
     else
