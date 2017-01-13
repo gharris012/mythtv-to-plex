@@ -46,6 +46,7 @@
 #
 #   HandBrakeCLI    http://handbrake.fr/
 #   mediainfo       http://mediainfo.sourceforge.net/
+#   bc              http://gnuwin32.sourceforge.net/packages/bc.htm
 #
 # Make sure both are in your `$PATH` or redefine the variables below.
 #
@@ -59,12 +60,7 @@ die() {
     exit ${2:-1}
 }
 
-escape_string() {
-    echo "$1" | sed "s/'/'\\\''/g;/ /s/^\(.*\)$/'\1'/"
-}
-
 readonly program="$(basename "$0")"
-
 readonly input="$1"
 
 output_ext="$2"
@@ -85,33 +81,41 @@ else
     handbrake="HandBrakeCLI"
 fi
 
-
-frame_rates_location="/path/to/Frame Rates"
-subtitles_location="/path/to/Subtitles"
-
 # qsv only works on my windows/intel computer
 if [ "$OSTYPE" == "msys" ]; then
     encoder_opts="--encoder qsv_h264 --encoder-preset=balanced"
 else
     encoder_opts="--encoder x264 --encoder-preset=medium"
 fi
-encoder_opts="$encoder_opts --encoder-profile=high --encoder-level=4.0 --vfr"
-filter_opts="--crop 0:0:0:0 --strict-anamorphic"
-handbrake_options="$encoder_opts $filter_opts --optimize --subtitle scan,1 --subtitle-burned=1"
-
-interlaced="$(mediainfo --Inform='Video;%ScanType%' "$input")"
-
-if [ "$interlaced" == "Interlaced" ]; then
-    handbrake_options="$handbrake_options --deinterlace=bob"
-fi
+encoder_opts="$encoder_opts --encoder-profile=high --encoder-level=4.0"
+filter_opts="--crop 0:0:0:0"
+handbrake_options="$encoder_opts $filter_opts --optimize --use-opencl --use-hwd"
 
 width="$(mediainfo --Inform='Video;%Width%' "$input")"
 height="$(mediainfo --Inform='Video;%Height%' "$input")"
+frame_rate="$(mediainfo --Inform='Video;%FrameRate%' "$input")"
+interlaced="$(mediainfo --Inform='Video;%ScanType%' "$input")"
+
+# some shows are reported as progressive even though they are interlaced
+# try to determine them using resolution (there is no 1080p broadcast)
+if [[ "$interlaced" == "Interlaced" || ( "$height" == "1080" && "$frame_rate" == "29.970" ) ]]; then
+    # double framerate for bob
+    # bc is not returning anything in windows.. seems to be a bug, using awk
+    #frame_rate=$(echo "scale=3;$frame_rate*2"|bc)
+    frame_rate=$(awk -vinput="$frame_rate" 'BEGIN{printf "%.3f", input*2}')
+    if [[ "$interlaced" == "Interlaced" ]]; then
+        handbrake_options="$handbrake_options --deinterlace=bob"
+    else
+        handbrake_options="$handbrake_options --decomb=bob"
+    fi
+fi
+
+handbrake_options="$handbrake_options --cfr --rate $frame_rate"
 
 if (($width > 1280)) || (($height > 720)); then
-    max_bitrate="5000"
-elif (($width > 720)) || (($height > 576)); then
     max_bitrate="4000"
+elif (($width > 720)) || (($height > 576)); then
+    max_bitrate="3000"
 else
     max_bitrate="1800"
 fi
@@ -141,13 +145,9 @@ fi
 
 handbrake_options="$handbrake_options --vb $bitrate"
 
-channels="$(mediainfo --Inform='Audio;%Channels%' "$input" | sed 's/[^0-9].*$//')"
-
-if (($channels > 2)); then
-    handbrake_options="$handbrake_options --aencoder copy:ac3,ca_aac"
-elif [ "$(mediainfo --Inform='General;%Audio_Format_List%' "$input" | sed 's| /.*||')" == 'AAC' ]; then
-    handbrake_options="$handbrake_options --aencoder copy:aac"
-fi
+# all-subtitles and all-audio are not available in my version
+handbrake_options="$handbrake_options --subtitle 1,2,3,4"
+handbrake_options="$handbrake_options --audio 1,2,3,4 --aencoder copy --audio-copy-mask aac,ac3,dts --audio-fallback av_aac"
 
 output="$input"
 outputbase="${output%\.[^.]*}"
